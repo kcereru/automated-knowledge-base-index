@@ -18,7 +18,7 @@ I needed to install [wikitextparser](https://pypi.org/project/wikitextparser/#in
 
 ## Usage
 
-`build_index.py path_to_dir`, where `path_to_dir` is the path to the directory which contains the notes. It will do some analysis and write an index file, overwriting it if it already exists (did I mention that it will overwrite Index.md? because it will).
+`python3 build_index.py path_to_dir`, where `path_to_dir` is the path to the directory which contains the notes. It will do some analysis and write an index file, overwriting it if it already exists (did I mention that it will overwrite Index.md? because it will).
 
 You might also want to change some of the variables in the script too. `INDEX_NAME` is Index.md by default, and the max number of notes it can have for each section is 4 (`num_indexed_notes`). You can also change the title of the note and preamble if you want.
 
