@@ -2,7 +2,7 @@
 
 A quick script to automatically write an Index.md file for a Zettelkasten-like knowledge base of markdown files, so I don't have to keep an index up to date manually.
 
-It's a hacky one!
+It's a hacky one! I'm still messing with it, so I wouldn't recommend running it yourself unless you've read the code.
 
 ## Assumptions
 
