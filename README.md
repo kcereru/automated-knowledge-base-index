@@ -1,36 +1,13 @@
 # automated-knowledge-base-index
 
-A quick script to automatically write an Index.md file for a Zettelkasten-like knowledge base of markdown files, so I don't have to keep an index up to date manually.
+I use Obsidian to work with my Zettelkasten-like knowledge base of markdown files (notes). This is a script to generate an index file so I don't have to keep an index up to date manually.
 
-It's a hacky one! I'm still messing with it, so I wouldn't recommend running it yourself unless you've read the code.
+Some context because it's pretty closely tied to my particular organisational quirks: in my current note naming system, I have "nameless" files which contain all kinds of thoughts I wrote down and might want to resurface later (with IDs like 9a4b1) and "named" files (for concepts like "Zettelkasten", which I'll just `[[wikilink]]` as I write my other thoughts).
 
-## Assumptions
+This script turns my notes into a graph using wikilinks between notes, and then prints out an index of "named" files in sections based on communities in the graph and the most important notes in that section. Importance of a note is determined using PageRank within the section to try and determine which concepts are most relevant. This gives me a way to quickly find particular areas without having to keep a map of content (MOC) file up to date.
 
-- Notes are in markdown with `.md` file extension.
-- All notes are on the same level, no subdirectories.
-- Internal links (between notes in the knowledge base) are wikilinks `[[like this]]`.
-- Index.md already exists in the directory and definitely isn't important (**IT WILL BE OVERWRITTEN**).
-- I don't have spaces in my filenames, not sure how it will handle them.
+Since I fairly often just link to a concept without creating a note for it, this means a whole bunch of notes in the index may not exist, but in Obsidian I can just click on the note to create it and then traverse the backlinks from there (which I currently use the Map Of Content plugin for, it's really good! https://github.com/Robin-Haupt-1/Obsidian-Map-of-Content).
 
-## Requirements
-
-I needed to install [wikitextparser](https://pypi.org/project/wikitextparser/#installation) and [NetworkX](https://networkx.org/documentation/stable/install.html), see their docs for details.
-
-## Usage
-
-`python3 build_index.py path_to_dir`, where `path_to_dir` is the path to the directory which contains the notes. It will do some analysis and write an index file, overwriting it if it already exists (did I mention that it will overwrite Index.md? because it will).
-
-You might also want to change some of the variables in the script too. `INDEX_NAME` is Index.md by default, and the max number of notes it can have for each section is 4 (`num_indexed_notes`). You can also change the title of the note and preamble if you want.
-
-## How does it decide the index?
-
-It treats them as a graph and uses NetworkX's implementation of the Label Propagation algorithm to determine communities of related notes.
-
-Then for each of those communities, it uses NetworkX's implementation of VoteRank to find the most [influential spreaders](https://www.nature.com/articles/srep27823). The goal is to find a set of notes within that community that provide you the best access to the rest of the notes within it.
-
-VoteRank will only return notes with a positive score though, so isolated notes won't be given a section.
-
-The index then consists of sections, each containing 1-4 notes which will hopefully give you an idea of the kind of notes in that section, in lieu of a title. Sections are ordered by total community size.
 
 ## Example index
 
@@ -38,7 +15,7 @@ I wrote this by hand based on my own index, but it should be representative. Num
 
 ---
 
-# Main Index
+# Index
 
 This index is automated, any edits will be overwritten on next regeneration.
 

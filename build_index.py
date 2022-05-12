@@ -1,22 +1,24 @@
 import os
 import sys
 import argparse
+import heapq
 import wikitextparser as wtp
 import networkx as nx
 from networkx.algorithms import community
 from pathlib import Path
 
-INDEX_NAME      = 'Index'
-MD_EXTENSION    = '.md'
+INDEX_NAME = '0'
+MD_EXTENSION = '.md'
+
 
 class NoteGraph:
 
     def __init__(self, root_dir):
-        self.root_dir           = root_dir
-        self.digraph            = nx.DiGraph()
-        self.index              = []
+        self.root_dir = root_dir
+        self.digraph = nx.DiGraph()
+        self.index = []
         self.populate_digraph()
-        self.num_indexed_notes  = 7 # changeable, I just thought it seemed good
+        self.num_indexed_notes = 7  # changeable, I just thought it seemed good
 
     def node_inlinks_generator(self, min_inlinks, max_inlinks):
         """
@@ -35,27 +37,43 @@ class NoteGraph:
     def populate_index(self):
         """
         Will populate the index as a list of sections, with each section being a list of notes.
-        For each section returned by the section generator, creates a subgraph and gets up to four
+        For each section returned by the section generator, creates a subgraph and gets up to k
         of the highest ranked notes.
-        Order them by section size (not number of important notes).
+        Order them by most recently modified note in the section.
         """
 
         sections_by_num = []
 
         for section in self.sections_generator():
-            sections_by_num.append((len(section), self.get_important_notes(section)))
+            # TODO: get the most recent modification date in this section
+            # put them into a max heap so I can grab the biggest (most recent) and use that
+            # need to open every file in the section, if it exists
+
+            sections_by_num.append(
+                (len(section),
+                 self.get_important_notes(section, self.num_indexed_notes)))
 
         for section in sorted(sections_by_num, reverse=True):
             self.index.append(section[1])
 
-    def get_important_notes(self, section):
+    def get_important_notes(self, section, k):
         """
-        Returns up to four of the highest ranked notes in a subgraph of the provided notes.
+        Returns the highest ranked notes in a subgraph of the provided notes, up to the given value
         """
 
         subgraph = self.digraph.subgraph(section)
 
-        important_notes = nx.voterank(subgraph, self.num_indexed_notes)
+        notes_to_pagerank = nx.pagerank(subgraph)
+
+        # we only want the human readable ones (starting with uppercase letter)
+        concepts_to_pagerank = {
+            k: v
+            for (k, v) in notes_to_pagerank.items() if k[0].isupper()
+        }
+
+        important_notes = heapq.nlargest(k,
+                                         concepts_to_pagerank,
+                                         key=notes_to_pagerank.get)
 
         return important_notes
 
@@ -64,21 +82,29 @@ class NoteGraph:
         Yields the tuples that represent links between notes, using wikilinks
         since they're used for internal links.
         Don't count self links, but permit links to notes that might not exist in the dir.
-        That means we can immediately take advantage of multiple notes linking 
+        That means we can immediately take advantage of multiple notes linking
         the topic they're on without requiring a note on the topic itself.
         """
 
         for note in self.notes_generator():
+            # skip reading links from the index
+            if note == INDEX_NAME:
+                continue
+
             path = os.path.join(self.root_dir, note) + MD_EXTENSION
+
+            # skip this note if it doesn't actually exist (eg different extension)
+            if not os.path.exists(path):
+                continue
+
             with open(path, 'r') as f:
-                data        = f.read()
-                wikilinks   = wtp.parse(data).wikilinks
+                data = f.read()
+                wikilinks = wtp.parse(data).wikilinks
 
                 for wikilink in wikilinks:
                     linked_note = wikilink.title
                     if note != linked_note:
                         yield (note, wikilink.title)
-
 
     def notes_generator(self):
         """
@@ -111,13 +137,13 @@ class NoteGraph:
     def girvan_newman_generator(self, graph):
         community_iterator = community.girvan_newman(graph)
 
-        for _ in range (self.num_indexed_notes):
+        for _ in range(self.num_indexed_notes):
             next(community_iterator)
 
         communities = next(community_iterator)
 
         for c in communities:
-            yield c 
+            yield c
 
     def greedy_modularity_generator(self, graph):
         for c in community.greedy_modularity_communities(graph):
@@ -128,15 +154,15 @@ class NoteGraph:
 
         with open(path, 'w') as f:
 
-            md =    '# Index\n\n'
-            md +=   'This index is automated, any edits will be overwritten on next regeneration.\n\n'
-            md +=   '---\n\n'
+            md = '## Index\n\n'
+            md += 'This index is automated, any edits will be overwritten on next regeneration.\n\n'
+            md += '---\n\n'
 
             for section in self.index:
                 if not section:
                     continue
 
-                section_md      = '## [[' + section[0] + ']]\n'
+                section_md = '## [[' + section[0] + ']]\n'
 
                 if len(section) > 1:
                     section_list = section[1:]
@@ -175,7 +201,6 @@ notes.print_index_to_file(INDEX_NAME + MD_EXTENSION)
 # print("\nStrongly connected components")
 # for c in sorted(nx.strongly_connected_components(notes.digraph), key=len):
 #     print(c)
-
 
 # print("\nweakly connected components")
 # for c in sorted(nx.weakly_connected_components(notes.digraph), key=len):
